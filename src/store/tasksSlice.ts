@@ -1,28 +1,25 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { fetchTasks, createTask, deleteTask } from '../tasksAPI';
+import {fetchTasks} from "../tasksAPI.ts";
 
-export interface Task {
+interface Task {
     id: string;
     title: string;
     status: boolean;
 }
 
-export const fetchTasksAsync = createAsyncThunk<Task[]>('tasks/fetchTasks', async () => {
-    const response = await fetchTasks();
-    return Object.values(response.data ?? {}) as Task[];
-});
+interface TasksState {
+    tasks: Task[];
+    status: 'idle' | 'loading' | 'succeeded' | 'failed';
+    error: string | null;
+}
 
-export const createTaskAsync = createAsyncThunk<Task, { title: string; status: boolean }>(
-    'tasks/createTask',
-    async (task) => {
-        const response = await createTask(task);
-        return response.data;
+export const fetchTasksAsync = createAsyncThunk('tasks/fetchTasks', async () => {
+    try {
+        const response = await fetchTasks();
+        return Object.values(response.data ?? {}) as Task[];
+    } catch (error) {
+        throw new Error('Failed to fetch tasks');
     }
-);
-
-export const deleteTaskAsync = createAsyncThunk<string, string>('tasks/deleteTask', async (id) => {
-    await deleteTask(id);
-    return id;
 });
 
 const tasksSlice = createSlice({
@@ -31,7 +28,7 @@ const tasksSlice = createSlice({
         tasks: [] as Task[],
         status: 'idle' as 'idle' | 'loading' | 'succeeded' | 'failed',
         error: null as string | null,
-    },
+    } as TasksState,
     reducers: {},
     extraReducers: (builder) => {
         builder
@@ -42,18 +39,16 @@ const tasksSlice = createSlice({
                 state.status = 'succeeded';
                 state.tasks = action.payload;
             })
-            .addCase(createTaskAsync.fulfilled, (state, action) => {
-                state.status = 'succeeded';
-                state.tasks.push(action.payload);
-            })
-            .addCase(deleteTaskAsync.fulfilled, (state, action) => {
-                state.status = 'succeeded';
-                const deletedTaskId = action.payload;
-                state.tasks = state.tasks.filter((task) => task.id !== deletedTaskId);
+            .addCase(fetchTasksAsync.rejected, (state, action) => {
+                state.status = 'failed';
+                state.error = action.error.message ?? 'Failed to fetch tasks';
             });
     },
 });
 
+
+
 export const selectAllTasks = (state: { tasks: { tasks: Task[] } }) => state.tasks.tasks;
+export const selectStatus = (state: { tasks: TasksState }) => state.tasks.status;
 
 export default tasksSlice.reducer;

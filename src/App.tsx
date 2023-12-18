@@ -4,8 +4,9 @@ import {
     fetchTasksAsync,
     createTaskAsync,
     selectAllTasks,
-    Task,
 } from './store/tasksSlice';
+import Task from "./type.ts";
+
 
 const TaskItem: React.FC<{ task: Task; onUpdate: (status: boolean) => void; onDelete: () => void }> = ({
                                                                                                            task,
